@@ -69,7 +69,7 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
                 Errors = errors,
                 Warnings = warnings,
                 BuildTime = stopwatch.Elapsed.TotalSeconds,
-                Output = result.Output
+                Output = TruncateOutput(result.Output, result.ExitCode != 0)
             };
         }
         catch (Exception ex)
@@ -90,7 +90,7 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
                 },
                 Warnings = warnings,
                 BuildTime = stopwatch.Elapsed.TotalSeconds,
-                Output = $"Build failed with exception: {ex.Message}\n{ex.StackTrace}"
+                Output = TruncateOutput($"Build failed with exception: {ex.Message}\n{ex.StackTrace}", true)
             };
         }
     }
@@ -130,6 +130,70 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
         };
 
         return possiblePaths.FirstOrDefault(File.Exists);
+    }
+
+    private string TruncateOutput(string output, bool isFailed)
+    {
+        const int maxChars = 15000; // Conservative limit to stay under 25k tokens
+        
+        if (string.IsNullOrEmpty(output) || output.Length <= maxChars)
+        {
+            return output;
+        }
+
+        if (isFailed)
+        {
+            // For failed builds, prioritize the end of the output (where errors typically appear)
+            var lines = output.Split('\n');
+            var importantLines = new List<string>();
+            var currentLength = 0;
+            
+            // Add summary line if present
+            for (int i = 0; i < Math.Min(10, lines.Length); i++)
+            {
+                if (lines[i].Contains("Build FAILED") || lines[i].Contains("error") || lines[i].Contains("Error"))
+                {
+                    importantLines.Add(lines[i]);
+                    currentLength += lines[i].Length + 1;
+                    break;
+                }
+            }
+            
+            // Add errors from the end
+            for (int i = lines.Length - 1; i >= 0 && currentLength < maxChars - 100; i--)
+            {
+                var line = lines[i];
+                if (currentLength + line.Length + 1 > maxChars - 100) break;
+                
+                if (line.Contains("error") || line.Contains("Error") || 
+                    line.Contains("warning") || line.Contains("Warning") ||
+                    line.Contains("Build FAILED") || line.Contains("Time Elapsed"))
+                {
+                    importantLines.Insert(importantLines.Count == 0 ? 0 : 1, line);
+                    currentLength += line.Length + 1;
+                }
+            }
+            
+            var result = string.Join("\n", importantLines);
+            if (result.Length < maxChars - 200)
+            {
+                // Add some context from the end
+                var remaining = maxChars - result.Length - 100;
+                var endPortion = output.Substring(Math.Max(0, output.Length - remaining));
+                result += "\n...\n" + endPortion;
+            }
+            
+            return $"[Output truncated - showing errors and summary]\n{result}";
+        }
+        else
+        {
+            // For successful builds, show beginning and end
+            var halfMax = maxChars / 2 - 50;
+            var start = output.Substring(0, Math.Min(halfMax, output.Length));
+            var end = output.Length > halfMax ? output.Substring(output.Length - halfMax) : "";
+            
+            return start + "\n\n[... middle portion truncated ...]\n\n" + end;
+        }
     }
 
     private async Task<(int ExitCode, string Output)> RunMSBuildAsync(
