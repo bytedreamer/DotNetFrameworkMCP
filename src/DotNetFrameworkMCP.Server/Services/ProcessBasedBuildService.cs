@@ -68,7 +68,8 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
                 Success = result.ExitCode == 0,
                 Errors = errors,
                 Warnings = warnings,
-                BuildTime = stopwatch.Elapsed.TotalSeconds
+                BuildTime = stopwatch.Elapsed.TotalSeconds,
+                Output = result.Output
             };
         }
         catch (Exception ex)
@@ -88,7 +89,8 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
                     }
                 },
                 Warnings = warnings,
-                BuildTime = stopwatch.Elapsed.TotalSeconds
+                BuildTime = stopwatch.Elapsed.TotalSeconds,
+                Output = $"Build failed with exception: {ex.Message}\n{ex.StackTrace}"
             };
         }
     }

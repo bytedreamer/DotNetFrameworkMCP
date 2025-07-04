@@ -30,6 +30,9 @@ public class BuildResult
 
     [JsonPropertyName("buildTime")]
     public double BuildTime { get; set; }
+
+    [JsonPropertyName("output")]
+    public string Output { get; set; } = string.Empty;
 }
 
 public class BuildMessage

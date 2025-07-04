@@ -67,6 +67,7 @@ public class BuildProjectHandlerTests
         Assert.That(buildResult.Success, Is.True);
         Assert.That(buildResult.Errors, Is.Empty);
         Assert.That(buildResult.Warnings, Is.Empty);
+        Assert.That(buildResult.Output, Is.EqualTo("Build succeeded."));
     }
 
     [Test]
@@ -94,7 +95,8 @@ public class BuildProjectHandlerTests
                 Success = true,
                 Errors = new List<BuildMessage>(),
                 Warnings = new List<BuildMessage>(),
-                BuildTime = 2.45
+                BuildTime = 2.45,
+                Output = "Build succeeded."
             });
         }
     }
