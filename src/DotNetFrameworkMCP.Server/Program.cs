@@ -97,6 +97,7 @@ var host = Host.CreateDefaultBuilder(args)
 
         // Register services
         services.AddSingleton<IMSBuildService, MSBuildService>();
+        services.AddSingleton<IProcessBasedBuildService, ProcessBasedBuildService>();
 
         // Register tool handlers
         services.AddSingleton<IToolHandler, BuildProjectHandler>();

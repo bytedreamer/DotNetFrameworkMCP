@@ -13,15 +13,18 @@ public class BuildProjectHandler : IToolHandler
     private readonly ILogger<BuildProjectHandler> _logger;
     private readonly McpServerConfiguration _configuration;
     private readonly IMSBuildService _msBuildService;
+    private readonly IProcessBasedBuildService _processBasedBuildService;
 
     public BuildProjectHandler(
         ILogger<BuildProjectHandler> logger,
         IOptions<McpServerConfiguration> configuration,
-        IMSBuildService msBuildService)
+        IMSBuildService msBuildService,
+        IProcessBasedBuildService processBasedBuildService)
     {
         _logger = logger;
         _configuration = configuration.Value;
         _msBuildService = msBuildService;
+        _processBasedBuildService = processBasedBuildService;
     }
 
     public string Name => "build_project";
@@ -92,12 +95,30 @@ public class BuildProjectHandler : IToolHandler
 
         try
         {
-            return await _msBuildService.BuildProjectAsync(
-                request.Path,
-                configuration,
-                platform,
-                request.Restore,
-                cts.Token);
+            // Try MSBuild API first
+            try
+            {
+                return await _msBuildService.BuildProjectAsync(
+                    request.Path,
+                    configuration,
+                    platform,
+                    request.Restore,
+                    cts.Token);
+            }
+            catch (Exception ex) when (ex.Message.Contains("System.Configuration.ConfigurationManager") || 
+                                     ex.Message.Contains("Build was canceled") ||
+                                     ex.Message.Contains("internal failure"))
+            {
+                _logger.LogWarning("MSBuild API failed, falling back to process-based build: {Error}", ex.Message);
+                
+                // Fallback to process-based MSBuild
+                return await _processBasedBuildService.BuildProjectAsync(
+                    request.Path,
+                    configuration,
+                    platform,
+                    request.Restore,
+                    cts.Token);
+            }
         }
         catch (OperationCanceledException)
         {

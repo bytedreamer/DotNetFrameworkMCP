@@ -16,6 +16,7 @@ public class BuildProjectHandlerTests
     private ILogger<BuildProjectHandler> _logger;
     private IOptions<McpServerConfiguration> _configuration;
     private MockMSBuildService _msBuildService;
+    private MockProcessBasedBuildService _processBasedBuildService;
 
     [SetUp]
     public void Setup()
@@ -28,7 +29,8 @@ public class BuildProjectHandlerTests
             BuildTimeout = 600000
         });
         _msBuildService = new MockMSBuildService();
-        _handler = new BuildProjectHandler(_logger, _configuration, _msBuildService);
+        _processBasedBuildService = new MockProcessBasedBuildService();
+        _handler = new BuildProjectHandler(_logger, _configuration, _msBuildService, _processBasedBuildService);
     }
 
     [Test]
@@ -96,6 +98,20 @@ public class BuildProjectHandlerTests
                 Errors = new List<BuildMessage>(),
                 Warnings = new List<BuildMessage>(),
                 BuildTime = 1.23
+            });
+        }
+    }
+
+    private class MockProcessBasedBuildService : IProcessBasedBuildService
+    {
+        public Task<Models.BuildResult> BuildProjectAsync(string projectPath, string configuration, string platform, bool restore, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new Models.BuildResult
+            {
+                Success = true,
+                Errors = new List<BuildMessage>(),
+                Warnings = new List<BuildMessage>(),
+                BuildTime = 2.45
             });
         }
     }
