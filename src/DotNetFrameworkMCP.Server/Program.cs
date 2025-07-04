@@ -22,6 +22,9 @@ var host = Host.CreateDefaultBuilder(args)
         services.Configure<McpServerConfiguration>(
             context.Configuration.GetSection("McpServer"));
 
+        // Register services
+        services.AddSingleton<IMSBuildService, MSBuildService>();
+
         // Register tool handlers
         services.AddSingleton<IToolHandler, BuildProjectHandler>();
         // TODO: Add other tool handlers here

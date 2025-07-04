@@ -2,6 +2,7 @@ using System.Text.Json;
 using DotNetFrameworkMCP.Server.Configuration;
 using DotNetFrameworkMCP.Server.Models;
 using DotNetFrameworkMCP.Server.Protocol;
+using DotNetFrameworkMCP.Server.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -11,13 +12,16 @@ public class BuildProjectHandler : IToolHandler
 {
     private readonly ILogger<BuildProjectHandler> _logger;
     private readonly McpServerConfiguration _configuration;
+    private readonly IMSBuildService _msBuildService;
 
     public BuildProjectHandler(
         ILogger<BuildProjectHandler> logger,
-        IOptions<McpServerConfiguration> configuration)
+        IOptions<McpServerConfiguration> configuration,
+        IMSBuildService msBuildService)
     {
         _logger = logger;
         _configuration = configuration.Value;
+        _msBuildService = msBuildService;
     }
 
     public string Name => "build_project";
@@ -74,16 +78,30 @@ public class BuildProjectHandler : IToolHandler
 
         _logger.LogInformation("Building project: {Path}", request.Path);
 
-        // TODO: Implement actual MSBuild integration
-        // This is a placeholder implementation
-        await Task.Delay(100); // Simulate some work
+        // Use default values from configuration if not specified
+        var configuration = string.IsNullOrEmpty(request.Configuration) 
+            ? _configuration.DefaultConfiguration 
+            : request.Configuration;
+        
+        var platform = string.IsNullOrEmpty(request.Platform) 
+            ? _configuration.DefaultPlatform 
+            : request.Platform;
 
-        return new BuildResult
+        // Create cancellation token with timeout
+        using var cts = new CancellationTokenSource(_configuration.BuildTimeout);
+
+        try
         {
-            Success = true,
-            Errors = new List<BuildMessage>(),
-            Warnings = new List<BuildMessage>(),
-            BuildTime = 1.23
-        };
+            return await _msBuildService.BuildProjectAsync(
+                request.Path,
+                configuration,
+                platform,
+                request.Restore,
+                cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException($"Build timed out after {_configuration.BuildTimeout}ms");
+        }
     }
 }

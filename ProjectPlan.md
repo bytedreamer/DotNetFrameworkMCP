@@ -90,11 +90,13 @@ tools:
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure (Week 1)
-- [ ] Set up C# project structure
-- [ ] Implement MCP protocol handling
-- [ ] Create basic server lifecycle (start, stop, health check)
-- [ ] Implement logging framework
-- [ ] Add configuration management
+- [x] Set up C# project structure
+- [x] Implement MCP protocol handling
+- [x] Create basic server lifecycle (start, stop, health check)
+- [x] Implement logging framework
+- [x] Add configuration management
+- [x] Switch test framework to NUnit
+- [x] Create initial unit tests
 
 ### Phase 2: Build Functionality (Week 2)
 - [ ] Implement MSBuild locator logic
