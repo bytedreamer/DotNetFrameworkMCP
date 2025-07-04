@@ -239,15 +239,32 @@ The service can be configured through `appsettings.json` or environment variable
     "DefaultConfiguration": "Debug",
     "DefaultPlatform": "Any CPU",
     "TestTimeout": 300000,
-    "BuildTimeout": 600000,
-    "EnableDetailedLogging": false
+    "BuildTimeout": 1200000,
+    "EnableDetailedLogging": false,
+    "PreferredVSVersion": "2022"
   }
 }
 ```
 
+### Configuration Options
+
+- **MsBuildPath**: Path to MSBuild.exe or "auto" for automatic detection
+- **DefaultConfiguration**: Default build configuration (Debug/Release)
+- **DefaultPlatform**: Default target platform (Any CPU/x86/x64)
+- **TestTimeout**: Test execution timeout in milliseconds (default: 5 minutes)
+- **BuildTimeout**: Build timeout in milliseconds (default: 20 minutes)
+- **EnableDetailedLogging**: Enable verbose logging
+- **PreferredVSVersion**: Preferred Visual Studio version ("2022", "2019", or "auto")
+
+The **PreferredVSVersion** setting controls which Visual Studio version's MSBuild and VSTest tools to use when multiple versions are installed:
+- `"2022"`: Prefer Visual Studio 2022 tools (default)
+- `"2019"`: Prefer Visual Studio 2019 tools
+- `"auto"`: Use any available version (searches 2022 first, then 2019)
+
 Environment variables use the prefix `MCPSERVER_`, for example:
 - `MCPSERVER_DefaultConfiguration=Release`
 - `MCPSERVER_EnableDetailedLogging=true`
+- `MCPSERVER_PreferredVSVersion=2019`
 
 ## Development Status
 

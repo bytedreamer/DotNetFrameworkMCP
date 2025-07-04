@@ -347,28 +347,71 @@ public class TestRunnerService : ITestRunnerService
 
     private string? FindVSTestConsoleExecutable()
     {
-        var possiblePaths = new[]
-        {
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-            @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
-        };
+        // Get preferred VS version from configuration
+        var preferredVersion = _configuration.PreferredVSVersion?.ToLower() ?? "2022";
+        
+        var possiblePaths = new List<string>();
 
-        foreach (var path in possiblePaths)
+        // Add paths based on preferred version first
+        if (preferredVersion == "2022" || preferredVersion == "auto")
         {
-            if (File.Exists(path))
+            possiblePaths.AddRange(new[]
             {
-                _logger.LogDebug("Found VSTest.Console.exe at: {Path}", path);
-                return path;
-            }
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+            });
         }
 
-        _logger.LogWarning("VSTest.Console.exe not found in standard locations");
-        return null;
+        if (preferredVersion == "2019" || preferredVersion == "auto")
+        {
+            possiblePaths.AddRange(new[]
+            {
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+            });
+        }
+
+        // If not auto mode and preferred version is not 2022 or 2019, add all versions as fallback
+        if (preferredVersion != "auto" && preferredVersion != "2022" && preferredVersion != "2019")
+        {
+            _logger.LogWarning("Unknown PreferredVSVersion '{Version}', falling back to auto detection", preferredVersion);
+            possiblePaths.AddRange(new[]
+            {
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+                @"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+            });
+        }
+
+        var foundPath = possiblePaths.FirstOrDefault(File.Exists);
+        if (foundPath != null)
+        {
+            var version = foundPath.Contains("2022") ? "2022" : foundPath.Contains("2019") ? "2019" : "Unknown";
+            _logger.LogInformation("Found VSTest.Console.exe version {Version} at: {Path}", version, foundPath);
+        }
+        else
+        {
+            _logger.LogWarning("VSTest.Console.exe not found in standard locations");
+        }
+
+        return foundPath;
     }
 
     private string? FindTestAdapterPath(string projectPath)
@@ -500,42 +543,84 @@ public class TestRunnerService : ITestRunnerService
             return envPath;
         }
 
+        // Get preferred VS version from configuration
+        var preferredVersion = _configuration.PreferredVSVersion?.ToLower() ?? "2022";
+        
         // Look for MSBuild.exe in standard Visual Studio locations
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
 
-        var possiblePaths = new[]
+        var possiblePaths = new List<string>();
+
+        // Add paths based on preferred version first
+        if (preferredVersion == "2022" || preferredVersion == "auto")
         {
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"),
-            // Legacy paths
+            possiblePaths.AddRange(new[]
+            {
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe")
+            });
+        }
+
+        if (preferredVersion == "2019" || preferredVersion == "auto")
+        {
+            possiblePaths.AddRange(new[]
+            {
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe")
+            });
+        }
+
+        // If not auto mode and preferred version is not 2022 or 2019, add all versions as fallback
+        if (preferredVersion != "auto" && preferredVersion != "2022" && preferredVersion != "2019")
+        {
+            _logger.LogWarning("Unknown PreferredVSVersion '{Version}', falling back to auto detection", preferredVersion);
+            possiblePaths.AddRange(new[]
+            {
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFiles, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"),
+                Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe")
+            });
+        }
+
+        // Add legacy paths as final fallback
+        possiblePaths.AddRange(new[]
+        {
             Path.Combine(programFilesX86, @"MSBuild\14.0\Bin\MSBuild.exe"),
             Path.Combine(programFilesX86, @"MSBuild\15.0\Bin\MSBuild.exe"),
             @"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe",
             @"C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe"
-        };
+        });
 
-        foreach (var path in possiblePaths)
+        var foundPath = possiblePaths.FirstOrDefault(File.Exists);
+        if (foundPath != null)
         {
-            if (File.Exists(path))
-            {
-                _logger.LogDebug("Found MSBuild.exe at: {Path}", path);
-                return path;
-            }
+            var version = foundPath.Contains("2022") ? "2022" : foundPath.Contains("2019") ? "2019" : "Legacy";
+            _logger.LogInformation("Found MSBuild.exe version {Version} at: {Path}", version, foundPath);
+        }
+        else
+        {
+            _logger.LogWarning("MSBuild.exe not found in standard locations");
         }
 
-        _logger.LogWarning("MSBuild.exe not found in standard locations");
-        return null;
+        return foundPath;
     }
 
     private string? FindSolutionForProject(string projectPath)
