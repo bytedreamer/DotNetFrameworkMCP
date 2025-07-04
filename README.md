@@ -72,28 +72,6 @@ Parameters:
 
 ## Testing the Service
 
-### With Claude Code (Same Machine)
-
-Add this configuration to your Claude Code MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "dotnet-framework": {
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "/path/to/your/project/src/DotNetFrameworkMCP.Server"
-      ],
-      "env": {
-        "MCPSERVER_EnableDetailedLogging": "true"
-      }
-    }
-  }
-}
-```
-
 ### With Claude Code (WSL to Windows)
 
 If Claude Code is running in WSL but you want the MCP server on Windows:
@@ -112,7 +90,7 @@ If Claude Code is running in WSL but you want the MCP server on Windows:
    ```
    Or directly:
    ```cmd
-   publish\DotNetFrameworkMCP.Server.exe --tcp --port 3001
+   publish\DotNetFrameworkMCP.Server.exe --port 3001
    ```
 
 #### Option 2: Build and Run Each Time
@@ -123,7 +101,7 @@ If Claude Code is running in WSL but you want the MCP server on Windows:
    ```
    Or manually:
    ```cmd
-   dotnet run --project src\DotNetFrameworkMCP.Server -- --tcp --port 3001
+   dotnet run --project src\DotNetFrameworkMCP.Server -- --port 3001
    ```
 
 2. **Configure Claude Code in WSL:**
@@ -171,13 +149,13 @@ If Claude Code is running in WSL but you want the MCP server on Windows:
 Use the provided test script:
 
 ```bash
-./test-server.sh
+./test-tcp-server.sh
 ```
 
-Or send MCP messages manually:
+Or test with netcat:
 
 ```bash
-echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "1.0"}}' | dotnet run --project src/DotNetFrameworkMCP.Server
+echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}}' | nc localhost 3001
 ```
 
 ### Available Test Messages

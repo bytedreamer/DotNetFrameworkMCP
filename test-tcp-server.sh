@@ -4,7 +4,7 @@ echo "Testing TCP MCP Server..."
 
 # Start the server in background
 cd "/mnt/c/Users/work-tower/Projects/Open/MCP For .Net Framework"
-dotnet run --project src/DotNetFrameworkMCP.Server -- --tcp --port 3001 &
+dotnet run --project src/DotNetFrameworkMCP.Server -- --port 3001 &
 SERVER_PID=$!
 
 # Wait a moment for server to start

@@ -8,10 +8,10 @@ cd /d "%~dp0"
 
 if exist "publish\DotNetFrameworkMCP.Server.exe" (
     echo Using compiled executable...
-    publish\DotNetFrameworkMCP.Server.exe --tcp --port 3001
+    publish\DotNetFrameworkMCP.Server.exe --port 3001
 ) else (
     echo Using dotnet run (building if needed)...
-    dotnet run --project "src\DotNetFrameworkMCP.Server" -- --tcp --port 3001
+    dotnet run --project "src\DotNetFrameworkMCP.Server" -- --port 3001
 )
 
 pause
