@@ -98,7 +98,26 @@ Add this configuration to your Claude Code MCP settings:
 
 If Claude Code is running in WSL but you want the MCP server on Windows:
 
-1. **Start the TCP server on Windows:**
+#### Option 1: Build Once, Run Compiled Executable (Recommended)
+
+1. **Build the project on Windows:**
+   ```cmd
+   build-on-windows.bat
+   ```
+   This creates a self-contained executable in the `publish` folder.
+
+2. **Start the TCP server:**
+   ```cmd
+   run-tcp-server.bat
+   ```
+   Or directly:
+   ```cmd
+   publish\DotNetFrameworkMCP.Server.exe --tcp --port 3001
+   ```
+
+#### Option 2: Build and Run Each Time
+
+1. **Start the TCP server (builds if needed):**
    ```cmd
    start-tcp-server.bat
    ```
@@ -125,6 +144,23 @@ If Claude Code is running in WSL but you want the MCP server on Windows:
    ```bash
    sudo apt install netcat-openbsd
    ```
+
+#### Benefits of Pre-Building on Windows
+
+- **Faster startup**: No build time when starting the server
+- **No build dependencies**: The compiled executable includes all dependencies
+- **Consistent behavior**: Same executable every time
+- **Easy deployment**: Just copy the `publish` folder
+
+#### Troubleshooting
+
+- **If the server doesn't start**: Check Windows Firewall - it may block port 3001
+- **If WSL can't connect**: Try using the Windows host IP instead of localhost:
+  ```bash
+  # In WSL, find Windows host IP:
+  cat /etc/resolv.conf | grep nameserver
+  ```
+- **Port already in use**: Change the port in both the server startup and bridge script
 
 ### Manual Testing
 
