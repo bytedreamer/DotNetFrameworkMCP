@@ -285,6 +285,7 @@ Environment variables use the prefix `MCPSERVER_`, for example:
 - ⏳ `run_project` - Execute console applications  
 - ⏳ `analyze_solution` - Solution structure analysis
 - ⏳ `list_packages` - NuGet package listing
+- ⏳ **Authentication & Security** - API key or token-based authentication for secure access
 - ⏳ Enhanced debugging and profiling integration
 
 ## Release Notes

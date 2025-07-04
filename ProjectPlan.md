@@ -218,13 +218,23 @@ var project = projectCollection.LoadProject(projectPath);
 
 ## Future Enhancements
 
+### Security & Authentication
+- API key or token-based authentication
+- Role-based access control for different operations
+- Audit logging for security compliance
+- Network access restrictions and whitelisting
+
+### Extended Platform Support
 - Support for .NET Core/.NET 5+ projects
 - Web project launching with browser integration
+- Support for F# and VB.NET projects
+
+### Advanced Development Features
 - Code coverage reporting
 - Incremental build support
 - Watch mode for continuous building/testing
 - Integration with code analyzers
-- Support for F# and VB.NET projects
+- Performance profiling and diagnostics
 
 ## Resources & References
 
