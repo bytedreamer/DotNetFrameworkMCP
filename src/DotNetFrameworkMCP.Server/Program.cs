@@ -20,10 +20,11 @@ var host = Host.CreateDefaultBuilder(args)
 
         // Register services
         services.AddSingleton<IProcessBasedBuildService, ProcessBasedBuildService>();
+        services.AddSingleton<ITestRunnerService, TestRunnerService>();
 
         // Register tool handlers
         services.AddSingleton<IToolHandler, BuildProjectHandler>();
-        // TODO: Add other tool handlers here
+        services.AddSingleton<IToolHandler, RunTestsHandler>();
         
         // Register the TCP MCP server
         services.AddSingleton<TcpMcpServer>();

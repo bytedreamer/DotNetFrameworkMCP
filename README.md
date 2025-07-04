@@ -1,33 +1,99 @@
-# .NET Framework MCP Service
+# .NET Framework MCP Server for Windows
 
-A Model Context Protocol (MCP) service that enables Claude Code to build, test, and run .NET Framework projects through standardized operations.
+A TCP-based Model Context Protocol (MCP) server specifically designed for building, testing, and running .NET Framework projects on Windows. This tool enables Claude Code (running in WSL or other environments) to remotely build .NET Framework projects using the Windows build toolchain.
+
+## Purpose
+
+This MCP server provides a bridge between AI assistants (like Claude) and the Windows .NET Framework build environment. It's specifically designed for scenarios where:
+- Claude Code is running in WSL/Linux but needs to build Windows .NET Framework projects
+- You need to build legacy .NET Framework applications that require Visual Studio MSBuild
+- You want AI assistance for .NET Framework development on Windows
+
+## Architecture
+
+```
+┌─────────────────┐    TCP/3001    ┌──────────────────┐
+│ Claude Code     │ ──────────────→ │ TCP MCP Server   │
+│ (WSL/Linux)     │                 │ (Windows)        │
+└─────────────────┘                 └──────────────────┘
+                                            │
+                                            ▼
+                                    ┌──────────────────┐
+                                    │ MSBuild.exe      │
+                                    │ (Visual Studio)  │
+                                    └──────────────────┘
+```
 
 ## Features
 
-- **Build Operations**: Trigger MSBuild for solutions and projects with support for multiple configurations and platforms
-- **Test Execution**: Run tests from MSTest, NUnit, and xUnit frameworks
-- **Project Execution**: Run console applications with arguments and capture output
-- **Solution Analysis**: Analyze solution structure, dependencies, and NuGet packages
+- **TCP-Only Architecture**: Designed for remote access from WSL or other environments
+- **Process-Based MSBuild**: Direct execution of MSBuild.exe for maximum compatibility
+- **.NET Framework Focus**: Specifically built for .NET Framework projects (not .NET Core/.NET 5+)
+- **Build Operations**: Full support for Debug/Release configurations and platform targets
+- **Error Parsing**: Structured parsing of MSBuild errors and warnings
+- **Minimal Dependencies**: Clean architecture with only essential packages
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+### On Windows (Server Side)
+- **Visual Studio 2019/2022** or **Build Tools for Visual Studio**
+- **.NET 8.0 SDK** (for running the MCP server itself)
+- **Windows OS** (Windows 10/11 or Windows Server)
 
-- .NET 8.0 SDK or later
-- MSBuild (usually comes with Visual Studio or Build Tools for Visual Studio)
-- .NET Framework projects to work with
+### On WSL/Linux (Client Side)
+- **Claude Code** with MCP support
+- **netcat (nc)** for TCP communication: `sudo apt install netcat-openbsd`
 
-### Building the Service
+## Installation & Setup
 
-```bash
-dotnet build
-```
+### Windows Setup
 
-### Running the Service
+1. **Clone the repository** on your Windows machine:
+   ```cmd
+   git clone https://github.com/yourusername/dotnet-framework-mcp
+   cd dotnet-framework-mcp
+   ```
 
-```bash
-dotnet run --project src/DotNetFrameworkMCP.Server
-```
+2. **Build the MCP server**:
+   ```cmd
+   build-on-windows.bat
+   ```
+   This creates a self-contained executable in the `publish` folder.
+
+3. **Start the TCP server**:
+   ```cmd
+   run-tcp-server.bat
+   ```
+   The server will start listening on port 3001.
+
+### WSL/Linux Setup (Claude Code)
+
+1. **Configure Claude Code** by editing `~/.config/Claude/claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "dotnet-framework": {
+         "command": "/path/to/wsl-mcp-bridge.sh",
+         "env": {
+           "MCP_DEBUG": "true"
+         }
+       }
+     }
+   }
+   ```
+
+2. **Create the bridge script** (adjust the path to your project location):
+   ```bash
+   #!/bin/bash
+   exec nc localhost 3001
+   ```
+
+3. **Make it executable**:
+   ```bash
+   chmod +x wsl-mcp-bridge.sh
+   ```
+
+4. **Restart Claude Code** to pick up the configuration.
 
 ## MCP Tools
 

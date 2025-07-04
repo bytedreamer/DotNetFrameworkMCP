@@ -39,17 +39,29 @@ public class TcpMcpServer
         _listener.Start();
         
         _logger.LogInformation("TCP MCP Server listening on port {Port}", port);
+        
+        // Register cancellation callback to stop the listener
+        using var registration = cancellationToken.Register(() =>
+        {
+            _logger.LogInformation("Cancellation requested, stopping TCP listener");
+            _listener?.Stop();
+        });
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var client = await _listener.AcceptTcpClientAsync();
+                var client = await _listener.AcceptTcpClientAsync().WaitAsync(cancellationToken);
                 _logger.LogInformation("Client connected from {RemoteEndPoint}", client.Client.RemoteEndPoint);
                 
                 // Handle each client in a separate task
                 _ = Task.Run(async () => await HandleClientAsync(client, cancellationToken), cancellationToken);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation occurs
+            _logger.LogInformation("TCP server shutdown requested");
         }
         catch (ObjectDisposedException)
         {
@@ -58,6 +70,7 @@ public class TcpMcpServer
         finally
         {
             _listener?.Stop();
+            _listener = null;
             _logger.LogInformation("TCP MCP Server stopped");
         }
     }
