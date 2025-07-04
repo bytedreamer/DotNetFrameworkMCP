@@ -70,6 +70,80 @@ List NuGet packages in a project.
 Parameters:
 - `path` (string, required): Path to project
 
+## Testing the Service
+
+### With Claude Code (Same Machine)
+
+Add this configuration to your Claude Code MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "dotnet-framework": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/path/to/your/project/src/DotNetFrameworkMCP.Server"
+      ],
+      "env": {
+        "MCPSERVER_EnableDetailedLogging": "true"
+      }
+    }
+  }
+}
+```
+
+### With Claude Code (WSL to Windows)
+
+If Claude Code is running in WSL but you want the MCP server on Windows:
+
+1. **Start the TCP server on Windows:**
+   ```cmd
+   start-tcp-server.bat
+   ```
+   Or manually:
+   ```cmd
+   dotnet run --project src\DotNetFrameworkMCP.Server -- --tcp --port 3001
+   ```
+
+2. **Configure Claude Code in WSL:**
+   ```json
+   {
+     "mcpServers": {
+       "dotnet-framework": {
+         "command": "/path/to/project/wsl-mcp-bridge.sh",
+         "env": {
+           "MCP_DEBUG": "true"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Make sure netcat is installed in WSL:**
+   ```bash
+   sudo apt install netcat-openbsd
+   ```
+
+### Manual Testing
+
+Use the provided test script:
+
+```bash
+./test-server.sh
+```
+
+Or send MCP messages manually:
+
+```bash
+echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "1.0"}}' | dotnet run --project src/DotNetFrameworkMCP.Server
+```
+
+### Available Test Messages
+
+See `test-messages.json` for example MCP protocol messages you can send to test different functionality.
+
 ## Configuration
 
 The service can be configured through `appsettings.json` or environment variables:

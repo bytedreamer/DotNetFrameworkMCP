@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "dotnet-framework": {
+      "command": "/mnt/c/Users/work-tower/Projects/Open/MCP For .Net Framework/wsl-mcp-bridge.sh",
+      "env": {
+        "MCP_DEBUG": "true"
+      }
+    }
+  }
+}

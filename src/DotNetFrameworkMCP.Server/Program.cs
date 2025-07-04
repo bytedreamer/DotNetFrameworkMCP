@@ -29,8 +29,9 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<IToolHandler, BuildProjectHandler>();
         // TODO: Add other tool handlers here
         
-        // Register the MCP server
+        // Register the MCP servers
         services.AddSingleton<McpServer>();
+        services.AddSingleton<TcpMcpServer>();
 
         // Configure logging
         services.AddLogging(builder =>
@@ -55,7 +56,6 @@ var host = Host.CreateDefaultBuilder(args)
     .Build();
 
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
-var server = host.Services.GetRequiredService<McpServer>();
 
 try
 {
@@ -69,7 +69,31 @@ try
         cts.Cancel();
     };
 
-    await server.RunAsync(cts.Token);
+    // Check if running in TCP mode
+    var tcpMode = args.Contains("--tcp");
+    var port = 3001;
+    
+    if (args.Contains("--port"))
+    {
+        var portIndex = Array.IndexOf(args, "--port");
+        if (portIndex + 1 < args.Length && int.TryParse(args[portIndex + 1], out var parsedPort))
+        {
+            port = parsedPort;
+        }
+    }
+
+    if (tcpMode)
+    {
+        var tcpServer = host.Services.GetRequiredService<TcpMcpServer>();
+        logger.LogInformation("Starting TCP MCP Server on port {Port}", port);
+        await tcpServer.RunAsync(port, cts.Token);
+    }
+    else
+    {
+        var server = host.Services.GetRequiredService<McpServer>();
+        logger.LogInformation("Starting stdin/stdout MCP Server");
+        await server.RunAsync(cts.Token);
+    }
 }
 catch (Exception ex)
 {

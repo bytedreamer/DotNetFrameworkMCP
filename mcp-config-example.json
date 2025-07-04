@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "dotnet-framework": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/mnt/c/Users/work-tower/Projects/Open/MCP For .Net Framework/src/DotNetFrameworkMCP.Server"
+      ],
+      "env": {
+        "MCPSERVER_EnableDetailedLogging": "true"
+      }
+    }
+  }
+}

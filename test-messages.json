@@ -1,0 +1,10 @@
+// Example MCP messages to test the server
+
+// 1. Initialize the server
+{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "1.0"}}
+
+// 2. List available tools
+{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+
+// 3. Call the build_project tool
+{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "build_project", "arguments": {"path": "./src/DotNetFrameworkMCP.Server/DotNetFrameworkMCP.Server.csproj", "configuration": "Debug", "restore": true}}}
