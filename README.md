@@ -154,6 +154,10 @@ If Claude Code is running in WSL but you want the MCP server on Windows:
 
 #### Troubleshooting
 
+- **MSBuild errors**: The server will automatically find Visual Studio MSBuild. If you get MSBuild errors:
+  - Use `run-tcp-server-vs2022.bat` for explicit VS2022 MSBuild
+  - Or set environment variable: `set MSBUILD_PATH=C:\Path\To\MSBuild\Bin`
+  - Ensure Visual Studio or Build Tools for Visual Studio is installed
 - **If the server doesn't start**: Check Windows Firewall - it may block port 3001
 - **If WSL can't connect**: Try using the Windows host IP instead of localhost:
   ```bash
