@@ -33,6 +33,9 @@ public class TestResult
 
     [JsonPropertyName("testDetails")]
     public List<TestDetail> TestDetails { get; set; } = new();
+
+    [JsonPropertyName("output")]
+    public string Output { get; set; } = string.Empty;
 }
 
 public class TestDetail
