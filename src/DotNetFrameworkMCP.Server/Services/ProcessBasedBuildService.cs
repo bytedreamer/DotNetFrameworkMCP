@@ -49,10 +49,11 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
             var msbuildPath = FindMSBuildExecutable();
             if (string.IsNullOrEmpty(msbuildPath))
             {
-                throw new InvalidOperationException("Could not find MSBuild.exe. Please install Visual Studio or Build Tools for Visual Studio.");
+                _logger.LogError("Could not find MSBuild.exe in any standard locations");
+                throw new InvalidOperationException("Could not find MSBuild.exe. Please install Visual Studio or Build Tools for Visual Studio, or set MSBUILD_EXE_PATH environment variable.");
             }
 
-            _logger.LogInformation("Using MSBuild: {MSBuildPath}", msbuildPath);
+            _logger.LogInformation("Using MSBuild.exe: {MSBuildPath}", msbuildPath);
 
             // Build the project using MSBuild.exe process
             var result = await RunMSBuildAsync(msbuildPath, projectPath, configuration, platform, restore, cancellationToken);
