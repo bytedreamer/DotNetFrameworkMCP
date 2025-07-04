@@ -148,11 +148,17 @@ public class TcpMcpServer
                 case "tools/call":
                     return await HandleToolCallAsync(message);
                 
+                case "notifications/cancelled":
+                    // Handle cancellation notification from client
+                    _logger.LogInformation("Received cancellation notification from client");
+                    return null; // Notifications don't require responses
+                
                 case null when message.Id != null:
                     // This is likely a response to a request we made
                     return null;
                 
                 default:
+                    _logger.LogWarning("Unknown method received: {Method}", message.Method);
                     return CreateErrorResponse(
                         message.Id,
                         McpErrorCodes.MethodNotFound,

@@ -6,6 +6,6 @@ public class McpServerConfiguration
     public string DefaultConfiguration { get; set; } = "Debug";
     public string DefaultPlatform { get; set; } = "Any CPU";
     public int TestTimeout { get; set; } = 300000;
-    public int BuildTimeout { get; set; } = 600000;
+    public int BuildTimeout { get; set; } = 1200000; // 20 minutes for large solutions
     public bool EnableDetailedLogging { get; set; } = false;
 }

@@ -256,14 +256,26 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        // Wait for completion with timeout
+        // Wait for completion with timeout and cancellation support
         var timeoutMs = _configuration.BuildTimeout;
-        var completed = await Task.Run(() => process.WaitForExit(timeoutMs), cancellationToken);
-
-        if (!completed)
+        using var timeoutCts = new CancellationTokenSource(timeoutMs);
+        using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        
+        try
         {
+            await process.WaitForExitAsync(combinedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
+        {
+            _logger.LogWarning("Build timed out after {TimeoutMs}ms, killing process", timeoutMs);
             process.Kill();
             throw new TimeoutException($"Build timed out after {timeoutMs}ms");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Build cancelled by user, killing process");
+            process.Kill();
+            throw;
         }
 
         return (process.ExitCode, output.ToString());
