@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{05DF6AC8-45D9-4623-8746-36D0709ECF0D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetFrameworkMCP.Server", "src\DotNetFrameworkMCP.Server\DotNetFrameworkMCP.Server.csproj", "{4F4A5CB9-CB03-46C6-9092-08D35FDD0F98}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A913AF7C-6615-4A2F-A231-E5771E2E2BB4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetFrameworkMCP.Server.Tests", "tests\DotNetFrameworkMCP.Server.Tests\DotNetFrameworkMCP.Server.Tests.csproj", "{E66C94C5-B88E-4CDC-9B75-D3F7A5C97452}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F4A5CB9-CB03-46C6-9092-08D35FDD0F98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F4A5CB9-CB03-46C6-9092-08D35FDD0F98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F4A5CB9-CB03-46C6-9092-08D35FDD0F98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F4A5CB9-CB03-46C6-9092-08D35FDD0F98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E66C94C5-B88E-4CDC-9B75-D3F7A5C97452}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E66C94C5-B88E-4CDC-9B75-D3F7A5C97452}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E66C94C5-B88E-4CDC-9B75-D3F7A5C97452}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E66C94C5-B88E-4CDC-9B75-D3F7A5C97452}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4F4A5CB9-CB03-46C6-9092-08D35FDD0F98} = {05DF6AC8-45D9-4623-8746-36D0709ECF0D}
+		{E66C94C5-B88E-4CDC-9B75-D3F7A5C97452} = {A913AF7C-6615-4A2F-A231-E5771E2E2BB4}
+	EndGlobalSection
+EndGlobal
