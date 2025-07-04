@@ -12,19 +12,16 @@ public class BuildProjectHandler : IToolHandler
 {
     private readonly ILogger<BuildProjectHandler> _logger;
     private readonly McpServerConfiguration _configuration;
-    private readonly IMSBuildService _msBuildService;
-    private readonly IProcessBasedBuildService _processBasedBuildService;
+    private readonly IProcessBasedBuildService _buildService;
 
     public BuildProjectHandler(
         ILogger<BuildProjectHandler> logger,
         IOptions<McpServerConfiguration> configuration,
-        IMSBuildService msBuildService,
-        IProcessBasedBuildService processBasedBuildService)
+        IProcessBasedBuildService buildService)
     {
         _logger = logger;
         _configuration = configuration.Value;
-        _msBuildService = msBuildService;
-        _processBasedBuildService = processBasedBuildService;
+        _buildService = buildService;
     }
 
     public string Name => "build_project";
@@ -95,51 +92,13 @@ public class BuildProjectHandler : IToolHandler
 
         try
         {
-            // Try MSBuild API first, but fall back to process-based on any failure
-            try
-            {
-                _logger.LogDebug("Attempting MSBuild API approach");
-                var result = await _msBuildService.BuildProjectAsync(
-                    request.Path,
-                    configuration,
-                    platform,
-                    request.Restore,
-                    cts.Token);
-
-                // Check if the result indicates a MSBuild API compatibility issue
-                if (!result.Success && result.Errors.Any(e => 
-                    e.Message.Contains("System.Configuration.ConfigurationManager") ||
-                    e.Message.Contains("Build was canceled") ||
-                    e.Message.Contains("internal failure") ||
-                    e.Message.Contains("MSB4014")))
-                {
-                    var errorMessage = string.Join("; ", result.Errors.Select(e => e.Message));
-                    _logger.LogWarning("MSBuild API failed with compatibility error, falling back to process-based build. Error: {Error}", errorMessage);
-                    
-                    // Fallback to process-based MSBuild
-                    return await _processBasedBuildService.BuildProjectAsync(
-                        request.Path,
-                        configuration,
-                        platform,
-                        request.Restore,
-                        cts.Token);
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("MSBuild API threw exception, falling back to process-based build. Error: {Error}", ex.Message);
-                _logger.LogDebug("Full exception details: {Exception}", ex.ToString());
-                
-                // Fallback to process-based MSBuild for any MSBuild API exception
-                return await _processBasedBuildService.BuildProjectAsync(
-                    request.Path,
-                    configuration,
-                    platform,
-                    request.Restore,
-                    cts.Token);
-            }
+            _logger.LogDebug("Building project using process-based MSBuild approach");
+            return await _buildService.BuildProjectAsync(
+                request.Path,
+                configuration,
+                platform,
+                request.Restore,
+                cts.Token);
         }
         catch (OperationCanceledException)
         {

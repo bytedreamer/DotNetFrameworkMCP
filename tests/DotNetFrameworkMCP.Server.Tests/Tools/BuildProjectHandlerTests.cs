@@ -5,7 +5,6 @@ using DotNetFrameworkMCP.Server.Services;
 using DotNetFrameworkMCP.Server.Tools;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NUnit.Framework;
 
 namespace DotNetFrameworkMCP.Server.Tests.Tools;
 
@@ -15,8 +14,7 @@ public class BuildProjectHandlerTests
     private BuildProjectHandler _handler;
     private ILogger<BuildProjectHandler> _logger;
     private IOptions<McpServerConfiguration> _configuration;
-    private MockMSBuildService _msBuildService;
-    private MockProcessBasedBuildService _processBasedBuildService;
+    private MockProcessBasedBuildService _buildService;
 
     [SetUp]
     public void Setup()
@@ -28,9 +26,8 @@ public class BuildProjectHandlerTests
             DefaultPlatform = "Any CPU",
             BuildTimeout = 600000
         });
-        _msBuildService = new MockMSBuildService();
-        _processBasedBuildService = new MockProcessBasedBuildService();
-        _handler = new BuildProjectHandler(_logger, _configuration, _msBuildService, _processBasedBuildService);
+        _buildService = new MockProcessBasedBuildService();
+        _handler = new BuildProjectHandler(_logger, _configuration, _buildService);
     }
 
     [Test]
@@ -86,20 +83,6 @@ public class BuildProjectHandlerTests
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
-    }
-
-    private class MockMSBuildService : IMSBuildService
-    {
-        public Task<Models.BuildResult> BuildProjectAsync(string projectPath, string configuration, string platform, bool restore, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new Models.BuildResult
-            {
-                Success = true,
-                Errors = new List<BuildMessage>(),
-                Warnings = new List<BuildMessage>(),
-                BuildTime = 1.23
-            });
-        }
     }
 
     private class MockProcessBasedBuildService : IProcessBasedBuildService

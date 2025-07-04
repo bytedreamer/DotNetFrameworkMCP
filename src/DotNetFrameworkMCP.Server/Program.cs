@@ -1,87 +1,10 @@
 ﻿using DotNetFrameworkMCP.Server.Configuration;
 using DotNetFrameworkMCP.Server.Services;
 using DotNetFrameworkMCP.Server.Tools;
-using Microsoft.Build.Locator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
-// Register MSBuild before anything else
-var msbuildPath = Environment.GetEnvironmentVariable("MSBUILD_PATH");
-
-if (!string.IsNullOrEmpty(msbuildPath))
-{
-    // Use explicitly specified MSBuild path
-    Console.Error.WriteLine($"Using MSBuild from environment variable: {msbuildPath}");
-    MSBuildLocator.RegisterMSBuildPath(msbuildPath);
-}
-else
-{
-    // Try to find Visual Studio or Build Tools MSBuild (for .NET Framework)
-    var instances = MSBuildLocator.QueryVisualStudioInstances()
-        .Where(instance => instance.DiscoveryType == DiscoveryType.VisualStudioSetup ||
-                          instance.DiscoveryType == DiscoveryType.DeveloperConsole)
-        .OrderByDescending(instance => instance.Version)
-        .ToList();
-
-    if (instances.Any())
-    {
-        // Show all available instances
-        Console.Error.WriteLine("Available MSBuild instances:");
-        foreach (var instance in instances)
-        {
-            Console.Error.WriteLine($"  - {instance.Name} {instance.Version} at {instance.MSBuildPath}");
-            Console.Error.WriteLine($"    Discovery Type: {instance.DiscoveryType}");
-        }
-
-        // Prefer Visual Studio instances over standalone build tools
-        var vsInstance = instances.FirstOrDefault(i => i.Name.Contains("Visual Studio"));
-        var selectedInstance = vsInstance ?? instances.First();
-        
-        Console.Error.WriteLine($"Using MSBuild: {selectedInstance.Name} {selectedInstance.Version}");
-        Console.Error.WriteLine($"MSBuild Path: {selectedInstance.MSBuildPath}");
-        MSBuildLocator.RegisterInstance(selectedInstance);
-    }
-    else
-    {
-        // Fallback to looking for MSBuild in standard locations
-        Console.Error.WriteLine("No Visual Studio MSBuild instances found, checking standard locations...");
-        
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-        
-        var possiblePaths = new[]
-        {
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin"),
-            Path.Combine(programFilesX86, @"Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin"),
-            Path.Combine(programFiles, @"Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin")
-        };
-
-        var msbuildDir = possiblePaths.FirstOrDefault(Directory.Exists);
-        if (msbuildDir != null)
-        {
-            Console.Error.WriteLine($"Found MSBuild at: {msbuildDir}");
-            MSBuildLocator.RegisterMSBuildPath(msbuildDir);
-        }
-        else
-        {
-            Console.Error.WriteLine("WARNING: Could not find .NET Framework MSBuild!");
-            Console.Error.WriteLine("Please install Visual Studio or Build Tools for Visual Studio");
-            Console.Error.WriteLine("Or set MSBUILD_PATH environment variable to MSBuild.exe directory");
-            MSBuildLocator.RegisterDefaults();
-        }
-    }
-}
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((context, config) =>
@@ -96,7 +19,6 @@ var host = Host.CreateDefaultBuilder(args)
             context.Configuration.GetSection("McpServer"));
 
         // Register services
-        services.AddSingleton<IMSBuildService, MSBuildService>();
         services.AddSingleton<IProcessBasedBuildService, ProcessBasedBuildService>();
 
         // Register tool handlers
