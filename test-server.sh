@@ -7,7 +7,7 @@ echo "Testing MCP Server..."
 
 # Start the server and send test messages
 {
-    echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "1.0"}}'
+    echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}}'
     sleep 0.1
     echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}'
     sleep 0.1

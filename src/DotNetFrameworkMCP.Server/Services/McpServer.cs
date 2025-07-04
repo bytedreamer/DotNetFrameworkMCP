@@ -142,7 +142,7 @@ public class McpServer
             Id = request.Id,
             Result = new
             {
-                protocolVersion = "1.0",
+                protocolVersion = "2025-06-18",
                 capabilities = new
                 {
                     tools = new { }
