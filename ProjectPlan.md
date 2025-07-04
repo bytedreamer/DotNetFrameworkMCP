@@ -99,12 +99,14 @@ tools:
 - [x] Create initial unit tests
 
 ### Phase 2: Build Functionality (Week 2)
-- [ ] Implement MSBuild locator logic
-- [ ] Create build_project method
-- [ ] Add build output parsing
-- [ ] Implement error/warning extraction
-- [ ] Add NuGet restore functionality
-- [ ] Write unit tests for build operations
+- [x] Implement MSBuild locator logic
+- [x] Create build_project method
+- [x] Add build output parsing
+- [x] Implement error/warning extraction
+- [x] Add NuGet restore functionality
+- [x] Write unit tests for build operations
+- [x] Add TCP server support for cross-platform communication
+- [x] Create WSL-to-Windows bridge for Claude Code integration
 
 ### Phase 3: Test Runner Integration (Week 3)
 - [ ] Implement test discovery logic
