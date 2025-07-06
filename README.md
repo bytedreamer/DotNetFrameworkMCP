@@ -12,7 +12,7 @@ This MCP server provides a bridge between AI assistants (like Claude) and the Wi
 ## Architecture
 
 ```
-┌─────────────────┐    TCP/3001    ┌──────────────────┐
+┌─────────────────┐    TCP/3001     ┌──────────────────┐
 │ Claude Code     │ ──────────────→ │ TCP MCP Server   │
 │ (WSL/Linux)     │                 │ (Windows)        │
 └─────────────────┘                 └──────────────────┘
@@ -42,7 +42,7 @@ This MCP server provides a bridge between AI assistants (like Claude) and the Wi
 
 ### On WSL/Linux (Client Side)
 - **Claude Code** with MCP support
-- **netcat (nc)** for TCP communication: `sudo apt install netcat-openbsd`
+- **netcat (nc)** for TCP communication (only if using the bridge script): `sudo apt install netcat-openbsd`
 
 ## Installation & Setup
 
@@ -67,6 +67,31 @@ This MCP server provides a bridge between AI assistants (like Claude) and the Wi
    The server will start listening on port 3001.
 
 ### WSL/Linux Setup (Claude Code)
+
+#### How the WSL-to-Windows Bridge Works
+
+Since Claude Code only runs on macOS/Linux, Windows users must run it in WSL2. The bridge enables communication between Claude Code (in WSL2) and the MCP server (on Windows):
+
+1. **The MCP server** runs on Windows as a TCP server listening on port 3001
+2. **Claude Code** runs in WSL2 and needs to connect to the Windows MCP server
+3. **WSL2 networking** - By default, WSL2 uses NAT-based networking. To connect from WSL2 to Windows:
+   - In WSL2's default NAT mode, you may need to use the Windows host IP instead of localhost
+   - Windows 11 22H2+ offers "Mirrored Mode" networking which improves localhost connectivity
+   - The bridge script is configured to use `localhost` which works in many setups
+4. **The bridge script** (`wsl-mcp-bridge.sh`) uses netcat to establish the TCP connection:
+   - Claude Code executes the bridge script
+   - The script runs `nc localhost 3001` 
+   - This connects to the Windows MCP server via WSL2's localhost forwarding
+   - All MCP protocol communication flows through this TCP connection
+
+The flow looks like this:
+```
+Claude Code (WSL2) → Bridge Script → netcat → localhost:3001 → Windows MCP Server
+```
+
+You don't directly interact with netcat - it's wrapped inside the bridge script that Claude Code executes automatically.
+
+#### Configuration Steps
 
 1. **Configure Claude Code** by editing `~/.config/Claude/claude_desktop_config.json`:
    ```json
@@ -203,11 +228,19 @@ If Claude Code is running in WSL but you want the MCP server on Windows:
   - Or set environment variable: `set MSBUILD_PATH=C:\Path\To\MSBuild\Bin`
   - Ensure Visual Studio or Build Tools for Visual Studio is installed
 - **If the server doesn't start**: Check Windows Firewall - it may block port 3001
-- **If WSL can't connect**: Try using the Windows host IP instead of localhost:
+- **If WSL can't connect**: WSL2 networking varies by configuration. Try these solutions:
   ```bash
-  # In WSL, find Windows host IP:
+  # Option 1: Find Windows host IP (for default NAT mode):
+  ip route show | grep -i default | awk '{ print $3}'
+  # Or check nameserver:
   cat /etc/resolv.conf | grep nameserver
+  
+  # Option 2: Enable Mirrored Mode networking (Windows 11 22H2+)
+  # Add to .wslconfig in your Windows user directory:
+  # [wsl2]
+  # networkingMode=mirrored
   ```
+  Then update `WINDOWS_HOST` in `wsl-mcp-bridge.sh` to use the IP address instead of "localhost"
 - **Port already in use**: Change the port in both the server startup and bridge script
 
 ### Manual Testing
