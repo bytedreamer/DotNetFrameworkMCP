@@ -4,17 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace DotNetFrameworkMCP.Server.Tests.Executors;
 
+[TestFixture]
 public class ExecutorFactoryTests
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly Mock<IOptions<McpServerConfiguration>> _mockOptions;
-    private readonly McpServerConfiguration _configuration;
+    private IServiceProvider _serviceProvider;
+    private Mock<IOptions<McpServerConfiguration>> _mockOptions;
+    private McpServerConfiguration _configuration;
 
-    public ExecutorFactoryTests()
+    [SetUp]
+    public void SetUp()
     {
         _configuration = new McpServerConfiguration();
         _mockOptions = new Mock<IOptions<McpServerConfiguration>>();
@@ -40,7 +42,16 @@ public class ExecutorFactoryTests
         _serviceProvider = services.BuildServiceProvider();
     }
 
-    [Fact]
+    [TearDown]
+    public void TearDown()
+    {
+        if (_serviceProvider is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
+
+    [Test]
     public void CreateBuildExecutor_WhenUseDotNetCliIsFalse_ReturnsMSBuildExecutor()
     {
         // Arrange
@@ -51,10 +62,10 @@ public class ExecutorFactoryTests
         var executor = factory.CreateBuildExecutor();
 
         // Assert
-        Assert.IsType<MSBuildExecutor>(executor);
+        Assert.That(executor, Is.TypeOf<MSBuildExecutor>());
     }
 
-    [Fact]
+    [Test]
     public void CreateBuildExecutor_WhenUseDotNetCliIsTrue_ReturnsDotNetBuildExecutor()
     {
         // Arrange
@@ -65,10 +76,10 @@ public class ExecutorFactoryTests
         var executor = factory.CreateBuildExecutor();
 
         // Assert
-        Assert.IsType<DotNetBuildExecutor>(executor);
+        Assert.That(executor, Is.TypeOf<DotNetBuildExecutor>());
     }
 
-    [Fact]
+    [Test]
     public void CreateTestExecutor_WhenUseDotNetCliIsFalse_ReturnsVSTestExecutor()
     {
         // Arrange
@@ -79,10 +90,10 @@ public class ExecutorFactoryTests
         var executor = factory.CreateTestExecutor();
 
         // Assert
-        Assert.IsType<VSTestExecutor>(executor);
+        Assert.That(executor, Is.TypeOf<VSTestExecutor>());
     }
 
-    [Fact]
+    [Test]
     public void CreateTestExecutor_WhenUseDotNetCliIsTrue_ReturnsDotNetTestExecutor()
     {
         // Arrange
@@ -93,16 +104,16 @@ public class ExecutorFactoryTests
         var executor = factory.CreateTestExecutor();
 
         // Assert
-        Assert.IsType<DotNetTestExecutor>(executor);
+        Assert.That(executor, Is.TypeOf<DotNetTestExecutor>());
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
         // Act
         var factory = new ExecutorFactory(_serviceProvider, _mockOptions.Object);
 
         // Assert
-        Assert.NotNull(factory);
+        Assert.That(factory, Is.Not.Null);
     }
 }

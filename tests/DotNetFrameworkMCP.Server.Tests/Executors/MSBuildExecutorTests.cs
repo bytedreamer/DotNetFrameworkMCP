@@ -3,18 +3,20 @@ using DotNetFrameworkMCP.Server.Executors;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace DotNetFrameworkMCP.Server.Tests.Executors;
 
+[TestFixture]
 public class MSBuildExecutorTests
 {
-    private readonly Mock<ILogger<MSBuildExecutor>> _mockLogger;
-    private readonly Mock<IOptions<McpServerConfiguration>> _mockOptions;
-    private readonly McpServerConfiguration _configuration;
-    private readonly MSBuildExecutor _executor;
+    private Mock<ILogger<MSBuildExecutor>> _mockLogger;
+    private Mock<IOptions<McpServerConfiguration>> _mockOptions;
+    private McpServerConfiguration _configuration;
+    private MSBuildExecutor _executor;
 
-    public MSBuildExecutorTests()
+    [SetUp]
+    public void SetUp()
     {
         _mockLogger = new Mock<ILogger<MSBuildExecutor>>();
         _mockOptions = new Mock<IOptions<McpServerConfiguration>>();
@@ -27,7 +29,7 @@ public class MSBuildExecutorTests
         _executor = new MSBuildExecutor(_mockLogger.Object, _mockOptions.Object);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteBuildAsync_WithNonExistentProject_ReturnsFailedResult()
     {
         // Arrange
@@ -37,13 +39,13 @@ public class MSBuildExecutorTests
         var result = await _executor.ExecuteBuildAsync(nonExistentPath, "Debug", "Any CPU", true);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Single(result.Errors);
-        Assert.Contains("Project file not found", result.Errors[0].Message);
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        Assert.That(result.Errors[0].Message, Does.Contain("Project file not found"));
     }
 
-    [Fact]
-    public async Task ExecuteBuildAsync_WithTimeout_ThrowsTimeoutException()
+    [Test]
+    public async Task ExecuteBuildAsync_WithTimeout_ReturnsFailedResult()
     {
         // Arrange
         _configuration.BuildTimeout = 1; // 1ms timeout to force timeout
@@ -52,11 +54,12 @@ public class MSBuildExecutorTests
 
         try
         {
-            // Act & Assert
+            // Act
             var result = await _executor.ExecuteBuildAsync(tempProjectFile, "Debug", "Any CPU", true);
             
+            // Assert
             // Should return a failed result due to timeout or MSBuild not found
-            Assert.False(result.Success);
+            Assert.That(result.Success, Is.False);
         }
         finally
         {
@@ -66,17 +69,16 @@ public class MSBuildExecutorTests
         }
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
         // Act & Assert
-        Assert.NotNull(_executor);
+        Assert.That(_executor, Is.Not.Null);
     }
 
-    [Theory]
-    [InlineData("Debug", "Any CPU", true)]
-    [InlineData("Release", "x64", false)]
-    [InlineData("Debug", "x86", true)]
+    [TestCase("Debug", "Any CPU", true)]
+    [TestCase("Release", "x64", false)]
+    [TestCase("Debug", "x86", true)]
     public async Task ExecuteBuildAsync_WithDifferentConfigurations_HandlesGracefully(
         string configuration, string platform, bool restore)
     {
@@ -91,7 +93,7 @@ public class MSBuildExecutorTests
 
             // Assert
             // Result should be non-null (even if build fails due to no MSBuild)
-            Assert.NotNull(result);
+            Assert.That(result, Is.Not.Null);
         }
         finally
         {
