@@ -1,7 +1,7 @@
-using DotNetFrameworkMCP.Server.Configuration;
+using DotNetFrameworkMCP.Server.Executors;
+using DotNetFrameworkMCP.Server.Models;
 using DotNetFrameworkMCP.Server.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 
@@ -11,7 +11,8 @@ namespace DotNetFrameworkMCP.Server.Tests.Services;
 public class TestRunnerServiceTests
 {
     private Mock<ILogger<TestRunnerService>> _mockLogger;
-    private IOptions<McpServerConfiguration> _configuration;
+    private Mock<IExecutorFactory> _mockExecutorFactory;
+    private Mock<ITestExecutor> _mockTestExecutor;
     private TestRunnerService _service;
     private string _tempProjectFile;
 
@@ -19,12 +20,13 @@ public class TestRunnerServiceTests
     public void SetUp()
     {
         _mockLogger = new Mock<ILogger<TestRunnerService>>();
-        _configuration = Options.Create(new McpServerConfiguration
-        {
-            TestTimeout = 300000
-        });
+        _mockExecutorFactory = new Mock<IExecutorFactory>();
+        _mockTestExecutor = new Mock<ITestExecutor>();
 
-        _service = new TestRunnerService(_mockLogger.Object, _configuration);
+        _mockExecutorFactory.Setup(x => x.CreateTestExecutor())
+            .Returns(_mockTestExecutor.Object);
+
+        _service = new TestRunnerService(_mockLogger.Object, _mockExecutorFactory.Object);
 
         // Create a temporary project file for testing
         _tempProjectFile = Path.GetTempFileName();
@@ -52,13 +54,72 @@ public class TestRunnerServiceTests
     }
 
     [Test]
-    public async Task RunTestsAsync_WithNonExistentProject_ShouldReturnErrorResult()
+    public async Task RunTestsAsync_CallsExecutorFactory()
     {
         // Arrange
-        var nonExistentPath = "NonExistent.csproj";
+        var expectedResult = new TestResult
+        {
+            TotalTests = 5,
+            PassedTests = 4,
+            FailedTests = 1,
+            SkippedTests = 0,
+            Duration = 2.5,
+            TestDetails = new List<TestDetail>(),
+            Output = "Test output"
+        };
+
+        _mockTestExecutor.Setup(x => x.ExecuteTestsAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         // Act
-        var result = await _service.RunTestsAsync(nonExistentPath, null, false, CancellationToken.None);
+        var result = await _service.RunTestsAsync(_tempProjectFile, null, false);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(expectedResult));
+        _mockExecutorFactory.Verify(x => x.CreateTestExecutor(), Times.Once);
+        _mockTestExecutor.Verify(x => x.ExecuteTestsAsync(
+            _tempProjectFile, null, false, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task RunTestsAsync_WithFilter_PassesFilterToExecutor()
+    {
+        // Arrange
+        var filter = "TestCategory=Unit";
+        var expectedResult = new TestResult { TotalTests = 1, PassedTests = 1 };
+
+        _mockTestExecutor.Setup(x => x.ExecuteTestsAsync(
+                It.IsAny<string>(),
+                filter,
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        var result = await _service.RunTestsAsync(_tempProjectFile, filter, true);
+
+        // Assert
+        _mockTestExecutor.Verify(x => x.ExecuteTestsAsync(
+            _tempProjectFile, filter, true, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task RunTestsAsync_WhenExecutorThrows_ReturnsFailedResult()
+    {
+        // Arrange
+        _mockTestExecutor.Setup(x => x.ExecuteTestsAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Test executor failed"));
+
+        // Act
+        var result = await _service.RunTestsAsync(_tempProjectFile, null, false);
 
         // Assert
         Assert.That(result.TotalTests, Is.EqualTo(0));
@@ -66,72 +127,24 @@ public class TestRunnerServiceTests
         Assert.That(result.FailedTests, Is.EqualTo(0));
         Assert.That(result.SkippedTests, Is.EqualTo(0));
         Assert.That(result.TestDetails, Has.Count.EqualTo(1));
-        Assert.That(result.TestDetails[0].Name, Is.EqualTo("Test Execution Error"));
         Assert.That(result.TestDetails[0].Result, Is.EqualTo("Failed"));
-        Assert.That(result.TestDetails[0].ErrorMessage, Does.Contain("not found"));
+        Assert.That(result.TestDetails[0].ErrorMessage, Does.Contain("Test executor failed"));
     }
 
     [Test]
-    public async Task DetectTestFramework_WithMSTestProject_ShouldReturnMSTest()
-    {
-        // Act
-        var result = await _service.RunTestsAsync(_tempProjectFile, null, false, CancellationToken.None);
-
-        // The service should attempt to detect MSTest but will fail during execution
-        // since we don't have a real test assembly built
-        Assert.That(result, Is.Not.Null);
-    }
-
-    [Test]
-    public async Task RunTestsAsync_WithCancellation_ShouldHandleCancellation()
+    public async Task RunTestsAsync_WhenFactoryThrows_ReturnsFailedResult()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        _mockExecutorFactory.Setup(x => x.CreateTestExecutor())
+            .Throws(new InvalidOperationException("Factory failed"));
 
         // Act
-        var result = await _service.RunTestsAsync(_tempProjectFile, null, false, cts.Token);
+        var result = await _service.RunTestsAsync(_tempProjectFile, null, false);
 
-        // Assert - The service catches cancellation and returns an error result
+        // Assert
         Assert.That(result.TotalTests, Is.EqualTo(0));
         Assert.That(result.TestDetails, Has.Count.EqualTo(1));
         Assert.That(result.TestDetails[0].Result, Is.EqualTo("Failed"));
-    }
-
-    [TestCase("Microsoft.NET.Test.Sdk", "MSTest")]
-    [TestCase("MSTest.TestFramework", "MSTest")]
-    [TestCase("NUnit", "NUnit")]
-    [TestCase("nunit", "NUnit")]
-    [TestCase("xunit", "xUnit")]
-    [TestCase("xUnit", "xUnit")]
-    public async Task DetectTestFramework_ShouldDetectCorrectFramework(string packageReference, string expectedFramework)
-    {
-        // Arrange
-        var tempFile = Path.GetTempFileName();
-        var projectContent = $@"
-<Project Sdk=""Microsoft.NET.Sdk"">
-  <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include=""{packageReference}"" Version=""1.0.0"" />
-  </ItemGroup>
-</Project>";
-        
-        File.WriteAllText(tempFile, projectContent);
-
-        try
-        {
-            // Act
-            var result = await _service.RunTestsAsync(tempFile, null, false, CancellationToken.None);
-
-            // Assert - The service should try to run tests but fail due to no built assembly
-            // The important part is that it detected the framework correctly (we can't easily test this directly)
-            Assert.That(result, Is.Not.Null);
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
+        Assert.That(result.Output, Does.Contain("Test service failed"));
     }
 }

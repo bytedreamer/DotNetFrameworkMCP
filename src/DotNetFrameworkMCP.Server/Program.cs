@@ -1,4 +1,5 @@
 ﻿using DotNetFrameworkMCP.Server.Configuration;
+using DotNetFrameworkMCP.Server.Executors;
 using DotNetFrameworkMCP.Server.Services;
 using DotNetFrameworkMCP.Server.Tools;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,13 @@ var host = Host.CreateDefaultBuilder(args)
         // Configuration
         services.Configure<McpServerConfiguration>(
             context.Configuration.GetSection("McpServer"));
+
+        // Register executors
+        services.AddSingleton<MSBuildExecutor>();
+        services.AddSingleton<DotNetBuildExecutor>();
+        services.AddSingleton<VSTestExecutor>();
+        services.AddSingleton<DotNetTestExecutor>();
+        services.AddSingleton<IExecutorFactory, ExecutorFactory>();
 
         // Register services
         services.AddSingleton<IProcessBasedBuildService, ProcessBasedBuildService>();
