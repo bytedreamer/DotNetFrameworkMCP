@@ -45,18 +45,27 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
                 throw new FileNotFoundException($"Project file not found: {projectPath}");
             }
 
-            // Find MSBuild.exe
-            var msbuildPath = FindMSBuildExecutable();
-            if (string.IsNullOrEmpty(msbuildPath))
+            (int ExitCode, string Output) result;
+            
+            if (_configuration.UseDotNetCli)
             {
-                _logger.LogError("Could not find MSBuild.exe in any standard locations");
-                throw new InvalidOperationException("Could not find MSBuild.exe. Please install Visual Studio or Build Tools for Visual Studio, or set MSBUILD_EXE_PATH environment variable.");
+                // Use dotnet CLI
+                _logger.LogInformation("Using dotnet CLI for build");
+                result = await RunDotNetBuildAsync(projectPath, configuration, platform, restore, cancellationToken);
             }
+            else
+            {
+                // Use MSBuild
+                var msbuildPath = FindMSBuildExecutable();
+                if (string.IsNullOrEmpty(msbuildPath))
+                {
+                    _logger.LogError("Could not find MSBuild.exe in any standard locations");
+                    throw new InvalidOperationException("Could not find MSBuild.exe. Please install Visual Studio or Build Tools for Visual Studio, or set MSBUILD_EXE_PATH environment variable.");
+                }
 
-            _logger.LogInformation("Using MSBuild.exe: {MSBuildPath}", msbuildPath);
-
-            // Build the project using MSBuild.exe process
-            var result = await RunMSBuildAsync(msbuildPath, projectPath, configuration, platform, restore, cancellationToken);
+                _logger.LogInformation("Using MSBuild.exe: {MSBuildPath}", msbuildPath);
+                result = await RunMSBuildAsync(msbuildPath, projectPath, configuration, platform, restore, cancellationToken);
+            }
             
             // Parse the output for errors and warnings
             ParseBuildOutput(result.Output, errors, warnings);
@@ -387,5 +396,103 @@ public class ProcessBasedBuildService : IProcessBasedBuildService
                 });
             }
         }
+    }
+
+    private async Task<(int ExitCode, string Output)> RunDotNetBuildAsync(
+        string projectPath,
+        string configuration,
+        string platform,
+        bool restore,
+        CancellationToken cancellationToken)
+    {
+        var arguments = new List<string>
+        {
+            "build",
+            $"\"{projectPath}\"",
+            $"--configuration", configuration,
+            "--verbosity", "normal"
+        };
+
+        // Platform is typically handled differently in dotnet CLI
+        // For .NET Framework projects, it's often part of the runtime identifier
+        if (!string.IsNullOrEmpty(platform) && platform != "Any CPU")
+        {
+            arguments.Add($"-p:Platform=\"{platform}\"");
+        }
+
+        if (!restore)
+        {
+            arguments.Add("--no-restore");
+        }
+
+        var argumentString = string.Join(" ", arguments);
+        _logger.LogDebug("Running: {DotNetPath} {Arguments}", _configuration.DotNetPath, argumentString);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = _configuration.DotNetPath,
+            Arguments = argumentString,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(projectPath) ?? Environment.CurrentDirectory
+        };
+
+        var output = new StringBuilder();
+
+        using var process = new Process { StartInfo = psi };
+        
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.AppendLine(e.Data);
+            }
+        };
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.AppendLine(e.Data);
+            }
+        };
+
+        try
+        {
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to start dotnet CLI. Make sure .NET SDK is installed and '{_configuration.DotNetPath}' is in PATH.", ex);
+        }
+
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        // Wait for completion with timeout and cancellation support
+        var timeoutMs = _configuration.BuildTimeout;
+        using var timeoutCts = new CancellationTokenSource(timeoutMs);
+        using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        
+        try
+        {
+            await process.WaitForExitAsync(combinedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
+        {
+            _logger.LogWarning("Build timed out after {TimeoutMs}ms, killing process", timeoutMs);
+            process.Kill();
+            throw new TimeoutException($"Build timed out after {timeoutMs}ms");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Build cancelled by user, killing process");
+            process.Kill();
+            throw;
+        }
+
+        return (process.ExitCode, output.ToString());
     }
 }
