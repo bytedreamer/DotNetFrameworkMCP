@@ -274,7 +274,9 @@ The service can be configured through `appsettings.json` or environment variable
     "TestTimeout": 300000,
     "BuildTimeout": 1200000,
     "EnableDetailedLogging": false,
-    "PreferredVSVersion": "2022"
+    "PreferredVSVersion": "2022",
+    "UseDotNetCli": false,
+    "DotNetPath": "dotnet"
   }
 }
 ```
@@ -288,6 +290,8 @@ The service can be configured through `appsettings.json` or environment variable
 - **BuildTimeout**: Build timeout in milliseconds (default: 20 minutes)
 - **EnableDetailedLogging**: Enable verbose logging
 - **PreferredVSVersion**: Preferred Visual Studio version ("2022", "2019", or "auto")
+- **UseDotNetCli**: Use dotnet CLI instead of MSBuild/VSTest (default: false)
+- **DotNetPath**: Path to dotnet CLI executable (default: "dotnet")
 
 The **PreferredVSVersion** setting controls which Visual Studio version's MSBuild and VSTest tools to use when multiple versions are installed:
 - `"2022"`: Prefer Visual Studio 2022 tools (default)
@@ -298,6 +302,39 @@ Environment variables use the prefix `MCPSERVER_`, for example:
 - `MCPSERVER_DefaultConfiguration=Release`
 - `MCPSERVER_EnableDetailedLogging=true`
 - `MCPSERVER_PreferredVSVersion=2019`
+- `MCPSERVER_UseDotNetCli=true`
+
+### Using dotnet CLI Instead of MSBuild
+
+The MCP server now supports using the dotnet CLI as an alternative to MSBuild/VSTest. This can be useful when:
+- You don't have Visual Studio or Build Tools installed
+- You prefer using the .NET SDK toolchain
+- You're working with newer .NET projects that support the dotnet CLI
+
+To enable dotnet CLI mode:
+
+1. **Via configuration file** (`appsettings.json`):
+   ```json
+   {
+     "McpServer": {
+       "UseDotNetCli": true
+     }
+   }
+   ```
+
+2. **Via environment variable**:
+   ```cmd
+   set MCPSERVER__UseDotNetCli=true
+   ```
+
+**Note**: The dotnet CLI has some limitations when working with older .NET Framework projects:
+- Some project types may not be fully supported
+- Complex build configurations might require MSBuild
+- Legacy project formats (.csproj before SDK-style) may have limited support
+
+When `UseDotNetCli` is enabled:
+- `dotnet build` is used instead of MSBuild.exe
+- `dotnet test` is used instead of VSTest.Console.exe
 
 ## Development Status
 
